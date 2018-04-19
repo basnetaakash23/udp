@@ -78,7 +78,7 @@ int main(int argc, char** argv)
     rewind(fp);
     char file_buffer[file_length];
     int num_of_items = fread(file_buffer, 1, file_length, fp);
-    printf("Where is the error inside else statement?\n");
+
     printf("%d. is the file length\n", num_of_items);
 
     // memcpy(buffer, &file_length, 4);
@@ -91,44 +91,55 @@ int main(int argc, char** argv)
     //     err("sendto()");
     // }
     int x = 0;
+
     int frame_size = 20;
     char temp_buffer[frame_size];
+
     char temp_file[32];
     int sq_num = 0;
     int packet_num = 1;
 
     while(x < num_of_items){
+        printf("Where is the error inside else statement?\n");
 
 
         
-        // if(num_of_items -x < frame_size){
-        //     break;
-        //     // printf("Where is the error inside else statement?");
-        //     // printf("Where is the error?\n");
-        //     // frame_size = num_of_items - x;
-        //     // sq_num = packet_num % 2;
-        //     // fread(temp_buffer, 1, frame_size, fp+x);
-        //     // memcpy(temp_file, &frame_size, 4);
-        //     // // memcpy(temp_file+4, &seq_num, 4);
-        //     // memcpy(temp_file+4, temp_buffer, frame_size);
-        //     // if(sendto(sockfd, temp_file, 32 ,0, (struct sockaddr*)&serv_addr, slen)==-1){
-        //     //     err("sendto()");
-        //     // }
-        //     // x = x + frame_size;
-        //     // packet_num++;
-        // }
-
-        
-        sq_num = packet_num % 2;
-        fread(temp_buffer, 1, frame_size, fp+x);
-        memcpy(temp_file, &frame_size, 4);
+        if(num_of_items -x < frame_size){
+            printf("%d last packet\n", num_of_items-x);
+            
+            printf("Where is the error inside else statement?");
+            printf("Where is the error?\n");
+            frame_size = num_of_items - x;
+            sq_num = packet_num % 2;
+            fseek(fp, x, SEEK_SET);
+            fread(temp_buffer, 1, frame_size, fp);
+            memcpy(temp_file, &frame_size, 4);
             // memcpy(temp_file+4, &seq_num, 4);
-        memcpy(temp_file+4, temp_buffer, frame_size);
-        if(sendto(sockfd, temp_file, 32 ,0, (struct sockaddr*)&serv_addr, slen)==-1){
-            err("sendto()");
+            memcpy(temp_file+4, temp_buffer, frame_size);
+            if(sendto(sockfd, temp_file, 32 ,0, (struct sockaddr*)&serv_addr, slen)==-1){
+                err("sendto()");
+            }
+            x = x + frame_size;
+            packet_num++;
         }
-        x = x + frame_size;
-        packet_num++;
+
+        else{
+            sq_num = packet_num % 2;
+            printf("The value of x is %d\n", x);
+            fseek(fp, x, SEEK_SET);
+            fread(temp_buffer, 1, frame_size, fp);
+            printf("Where is the seg fault?\n");
+            memcpy(temp_file, &frame_size, 4);
+            // memcpy(temp_file+4, &seq_num, 4);
+            memcpy(temp_file+4, temp_buffer, frame_size);
+            if(sendto(sockfd, temp_file, 32 ,0, (struct sockaddr*)&serv_addr, slen)==-1){
+                err("sendto()");
+            }
+            x = x + frame_size;
+            packet_num++;
+
+        }
+        
 
         // else{
         //     printf("Where is the error inside else statement?");
