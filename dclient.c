@@ -31,9 +31,22 @@ void err(char *s)
     exit(1);
 }
 
+typedef struct packet{
+    char data[MAX_LINE];
+}Packet;
+
+typedef struct frame{
+    int frame_kind;
+    int seq_num;
+    int ack;
+    Packet packet;
+}Frame;
+
 int main(int argc, char** argv)
 {
     char buffer[MAX_LINE];
+    char ack_buffer[2];
+    int recv_result;
     int offset = 0;
     struct sockaddr_in serv_addr;
     int sockfd, i, slen=sizeof(serv_addr);
@@ -92,69 +105,68 @@ int main(int argc, char** argv)
     // }
     int x = 0;
 
-    int frame_size = 20;
-    char temp_buffer[frame_size];
+    int frame_size = 20;                //20 bytes
+    char temp_buffer[frame_size];       //frame size
 
-    char temp_file[32];
-    int sq_num = 0;
-    int packet_num = 1;
-
+    char temp_file[32];                 
+    int sq_num = 0;                    
+    int packet_num = 1;                 //
+                                        
     while(x < num_of_items){
         printf("Where is the error inside else statement?\n");
 
 
-        
-        if(num_of_items -x < frame_size){
-            printf("%d last packet\n", num_of_items-x);
-            
-            printf("Where is the error inside else statement?");
-            printf("Where is the error?\n");
-            frame_size = num_of_items - x;
-            sq_num = packet_num % 2;
-            fseek(fp, x, SEEK_SET);
-            fread(temp_buffer, 1, frame_size, fp);
-            memcpy(temp_file, &frame_size, 4);
-            // memcpy(temp_file+4, &seq_num, 4);
-            memcpy(temp_file+4, temp_buffer, frame_size);
-            if(sendto(sockfd, temp_file, 32 ,0, (struct sockaddr*)&serv_addr, slen)==-1){
-                err("sendto()");
+        while(1){
+            if(num_of_items -x < frame_size){
+                printf("%d last packet\n", num_of_items-x);
+                
+                printf("Where is the error inside else statement?");
+                printf("Where is the error?\n");
+                frame_size = num_of_items - x;
+                sq_num = packet_num % 2;
+                fseek(fp, x, SEEK_SET);
+                fread(temp_buffer, 1, frame_size, fp);
+                memcpy(temp_file, &frame_size, 4);
+                // memcpy(temp_file+4, &seq_num, 4);
+                memcpy(temp_file+4, temp_buffer, frame_size);
+                if(sendto(sockfd, temp_file, 32 ,0, (struct sockaddr*)&serv_addr, slen)==-1){
+                    err("sendto()");
+                }
+                recv_result = recvfrom(sockfd, ack_buffer, sizeof(ack_buffer), 0, (struct sockaddr*)&serv_addr, &slen);
+                if(recv_result > 0){
+                    printf("Ack received\n");
+                    break;
+                }
+                
             }
-            x = x + frame_size;
-            packet_num++;
-        }
 
-        else{
-            sq_num = packet_num % 2;
-            printf("The value of x is %d\n", x);
-            fseek(fp, x, SEEK_SET);
-            fread(temp_buffer, 1, frame_size, fp);
-            printf("Where is the seg fault?\n");
-            memcpy(temp_file, &frame_size, 4);
-            // memcpy(temp_file+4, &seq_num, 4);
-            memcpy(temp_file+4, temp_buffer, frame_size);
-            if(sendto(sockfd, temp_file, 32 ,0, (struct sockaddr*)&serv_addr, slen)==-1){
-                err("sendto()");
+            else{
+                sq_num = packet_num % 2;
+                printf("The value of x is %d\n", x);
+                fseek(fp, x, SEEK_SET);
+                fread(temp_buffer, 1, frame_size, fp);
+                printf("Where is the seg fault?\n");
+                memcpy(temp_file, &frame_size, 4);
+                // memcpy(temp_file+4, &seq_num, 4);
+                printf("Did we reach here?\n");
+                memcpy(temp_file+4, temp_buffer, frame_size);
+                if(sendto(sockfd, temp_file, 32 ,0, (struct sockaddr*)&serv_addr, slen)==-1){
+                    err("sendto()");
+                }
+                printf("Did we make progress from here?\n");
+                recv_result = recvfrom(sockfd, ack_buffer, sizeof(ack_buffer), 0, (struct sockaddr*)&serv_addr, &slen);
+                printf("About acknowledgement %d\n\n", recv_result);
+                if(recv_result > 0){
+                    printf("Ack received\n");
+                    break;
+                }    
             }
-            x = x + frame_size;
-            packet_num++;
 
         }
+        x = x + frame_size;
+        packet_num++;
+        printf("Did we reach here??\n");
         
-
-        // else{
-        //     printf("Where is the error inside else statement?");
-        //     sq_num = packet_num % 2;
-        //     fread(temp_buffer, 1, frame_size, fp+x);
-        //     memcpy(temp_file, &frame_size, 4);
-        //     // memcpy(temp_file+4, &seq_num, 4);
-        //     memcpy(temp_file+4, temp_buffer, frame_size);
-        //     if(sendto(sockfd, temp_file, 32 ,0, (struct sockaddr*)&serv_addr, slen)==-1){
-        //         err("sendto()");
-        //     }
-        //     x = x + frame_size;
-        //     packet_num++;
-        
-        // }
     }
 
     printf("May be it receives error in the if statement\n");

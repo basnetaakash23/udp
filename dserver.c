@@ -33,9 +33,11 @@ int main(void)
 {
     struct sockaddr_in my_addr, cli_addr;
     int sockfd, i;
+    int recv_result;
     socklen_t slen=sizeof(cli_addr);
     char buf[BUFLEN];
     char buffer[LENGTH];
+    char ack_buffer[2];
     
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))==-1)
         err("socket");
@@ -61,33 +63,33 @@ int main(void)
 //    }
     int packet_length = 0;
     char filelength[4];
+    int bytes_sent;
+
     
     while(1){
 
-        if(recvfrom(sockfd, buffer, LENGTH, 0, (struct sockaddr*)&cli_addr, &slen)==-1){
-        err("recvfrom()");
-        }
-        
-        memcpy(filelength, buffer, 4);
-        int file_length = *filelength;
-        char file_content[file_length];
-        printf("%d is the file length\n", file_length);
-
-        memcpy(file_content, buffer+4, file_length);
-        memcpy(buf+packet_length, file_content, file_length);
-        packet_length = packet_length + file_length;
-        if(file_length < 20){
-            break;
-        }
+        recv_result = recvfrom(sockfd, buffer, LENGTH, 0, (struct sockaddr*)&cli_addr, &slen);
+        printf("Bytes received %d\n", recv_result);
+        printf("Continue\n");
+        if(recv_result>0){
+            ack_buffer[0] = 1;
+            ack_buffer[1] = '\0';
+            bytes_sent = sendto(sockfd, ack_buffer, sizeof(ack_buffer), 0, (struct sockaddr*)&cli_addr, slen);
+            printf("Acknowledgement sent %d\n",bytes_sent);
+            memcpy(filelength, buffer, 4);
+            int file_length = *filelength;
+            char file_content[file_length];
+            printf("%d. is the file length\n", file_length);
+            memcpy(file_content, buffer+4, file_length);
+            memcpy(buf+packet_length, file_content, file_length);
+            packet_length = packet_length + file_length;
+            if(file_length < 20){
+                break;
+            }
+        }    
     }
-    
 
-    
-
-    
-    
-
-    for(int i = 0; i< packet_length; i++){
+    for(int i = 0; i < packet_length; i++){
            printf("%d. The character member is %d\n",i+1, buf[i]);
        }
 
