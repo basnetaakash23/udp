@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include "sendlib.c"
 #define BUFLEN 1000
 #define PORT 9930
 #define LENGTH 32
@@ -31,7 +32,13 @@ void err(char *str)
 }
 
 int main(void)
-{
+{   char *szPort;
+    char *lossProbab;
+    char *randomSeed;
+    char *endptr;
+
+    
+    short port;
     char header_buffer[HEADER_LENGTH];
     struct sockaddr_in my_addr, cli_addr;
     int sockfd, i;
@@ -40,6 +47,25 @@ int main(void)
     char buf[BUFLEN];
     char buffer[LENGTH];
     char ack_buffer[2];
+
+    if(argc != 4)
+    {
+        printf("Incomplete Command Line arguments\n");
+        exit(0);
+        return -1;
+    }
+    szPort = argv[1];
+    lossProbab = argv[2];
+    randomSeed = argv[3];
+
+    port = strtol(szPort, &endptr, 0);
+    if(*endptr){
+        printf("EchoCLNT: Invalid Port supplied.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    float loss_probability = atoi(lossProbab);
+    int random_seed = atoi(randomSeed);
     
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))==-1)
         err("socket");
@@ -63,38 +89,38 @@ int main(void)
 //        printf("Received packet from %s:%d\nData: %s\n\n",
 //               inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port), buf);
 //    }
-    printf("Preparing to receive the header file\n");
-    while(1){
-        printf("...........\n");
-        recv_result = recvfrom(sockfd, header_buffer, HEADER_LENGTH, 0, (struct sockaddr*)&cli_addr, &slen);
-        printf("Bytes received %d\n", recv_result);
-        if(recv_result>0){
-            char format[1];
-            format[0] = header_buffer[0];
-            uint8_t format_ = *format;     //format_ stores the 8 bit integer value of format
+    // printf("Preparing to receive the header file\n");
+    // while(1){
+    //     printf("...........\n");
+    //     recv_result = recvfrom(sockfd, header_buffer, HEADER_LENGTH, 0, (struct sockaddr*)&cli_addr, &slen);
+    //     printf("Bytes received %d\n", recv_result);
+    //     if(recv_result>0){
+    //         char format[1];
+    //         format[0] = header_buffer[0];
+    //         uint8_t format_ = *format;     //format_ stores the 8 bit integer value of format
 
 
-            uint8_t file_name_length = header_buffer[1]; //file name length has been copied
-            char target_file[file_name_length+1];
+    //         uint8_t file_name_length = header_buffer[1]; //file name length has been copied
+    //         char target_file[file_name_length+1];
 
-            memcpy(target_file, header_buffer+2, file_name_length); //copies into the memory
-            target_file[file_name_length] = '\0';    //target file will be stored as string
-
-
-            char fileLength[4];                      //stores the file length for now 
-            memcpy(filelength, header_buffer+2+file_name_length, 4);
-            int file_Length = *fileLength;
-
-            char ack[2] = ['1','\0'];
-
-            int sent_ack = sendto(sockfd, ack, sizeof(ack), 0, (struct sockaddr*)&cli_addr, slen);
+    //         memcpy(target_file, header_buffer+2, file_name_length); //copies into the memory
+    //         target_file[file_name_length] = '\0';    //target file will be stored as string
 
 
+    //         char fileLength[4];                      //stores the file length for now 
+    //         memcpy(filelength, header_buffer+2+file_name_length, 4);
+    //         int file_Length = *fileLength;
 
-            break;
+    //         char ack[2] = ['1','\0'];
+
+    //         int sent_ack = sendto(sockfd, ack, sizeof(ack), 0, (struct sockaddr*)&cli_addr, slen);
+
+
+
+    //         break;
   
-        }    
-    }
+    //     }    
+    // }
     
     /*Getting the format type*/
 
@@ -123,15 +149,21 @@ int main(void)
             printf("%d. is the file length\n", file_length);
             memcpy(expectedsq_num, buffer+4, 4);
             int expectedsq_num = *expectedsqnum;
-            if(expectedsq_num == sq_num){
+            if(file_length < 20){
+                break;
+            }
+
+            else{
+                if(expectedsq_num == sq_num){
                 memcpy(file_content, buffer+8, file_length);
                 memcpy(buf+packet_length, file_content, file_length);
                 packet_length = packet_length + file_length;
                 packet_num = packet_num + 1;
                 expectedsq_num = packet_num % 2;
-                bytes_sent = sendto(sockfd, &expectedsq_num, sizeof(ack_buffer), 0, (struct sockaddr*)&cli_addr, slen);
+
+                bytes_sent = lossy_sendto(loss_probability,random_seed,sockfd, &expectedsq_num, sizeof(ack_buffer), 0, (struct sockaddr*)&cli_addr, slen);
                 
-            }
+                }
             
             
             else{
@@ -141,12 +173,10 @@ int main(void)
                 packet_length = packet_length + file_length;
                 packet_num = packet_num + 1;
                 expectedsq_num = packet_num % 2;
-                bytes_sent = sendto(sockfd, &expectedsq_num, sizeof(ack_buffer), 0, (struct sockaddr*)&cli_addr, slen);
+                bytes_sent = lossy_sendto(loss_probability,random_seed,sockfd, &expectedsq_num, sizeof(ack_buffer), 0, (struct sockaddr*)&cli_addr, slen);
 
-            }
-            
-            if(file_length < 20){
-                break;
+                }
+
             }
         }    
     }

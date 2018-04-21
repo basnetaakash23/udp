@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "helper.h"
+
+#include "sendlib.c"
 //#define BUFLEN 512
 #define MAX_LINE     (1000)
 #define PORT 9930
@@ -34,16 +36,7 @@ void err(char *s)
     exit(1);
 }
 
-typedef struct packet{
-    char data[MAX_LINE];
-}Packet;
 
-typedef struct frame{
-    int frame_kind;
-    int seq_num;
-    int ack;
-    Packet packet;
-}Frame;
 
 int main(int argc, char** argv)
 {
@@ -130,27 +123,29 @@ int main(int argc, char** argv)
 
     printf("%d. is the file length\n", num_of_items);
 
+/*
+    // uint8_t filename_length = strlen(toName);
 
-    uint8_t filename_length = strlen(toName);
+    // memcpy(header_buffer, toFormat, 1);                         //copying format information
+    // memcpy(header_buffer+1, &filename_length, 1);               //copying file name filename_length
+    // memcpy(header_buffer+2, toName, filename_length);           //copying toname value
+    // memcpy(header_buffer+2+filename_length, &file_length, 4);   //copying file length
 
-    memcpy(header_buffer, toFormat, 1);                         //copying format information
-    memcpy(header_buffer+1, &filename_length, 1);               //copying file name filename_length
-    memcpy(header_buffer+2, toName, filename_length);           //copying toname value
-    memcpy(header_buffer+2+filename_length, &file_length, 4);   //copying file length
+    //  Trying to send command line arguments as header information to server
+    // while(1){
+    //     lossy_sendto(loss_probability,random_seed,sockfd, header_buffer, HEADER_LENGTH ,0, (struct sockaddr*)&serv_addr, slen)
+    //     char ack[2];
+    //     int received_result = recvfrom(sockfd, ack, sizeof(ack_buffer), 0, (struct sockaddr*)&serv_addr, &slen);
+    //     if(received_result>0){
+    //         break;
+    //     }
 
-    while(1){
-        sendto(sockfd, header_buffer, HEADER_LENGTH ,0, (struct sockaddr*)&serv_addr, slen)
-        char ack[2];
-        int received_result = recvfrom(sockfd, ack, sizeof(ack_buffer), 0, (struct sockaddr*)&serv_addr, &slen);
-        if(received_result>0){
-            break;
-        }
+    //     else{
+    //         continue;
+    //     }
 
-        else{
-            continue;
-        }
-
-    }
+    // }
+    */
     
 
     // memcpy(buffer, &file_length, 4);
@@ -165,9 +160,8 @@ int main(int argc, char** argv)
     int x = 0;
     int packet_num = 0;
     int size_of_frame = 0;
-
-                    //
-                                        
+    printf("Trying to send files now, Lets try and see how it goes\n");
+    /*Trying to send the packet */                                   
     while(x < num_of_items){
         printf("Where is the error inside else statement?\n");
 
@@ -185,13 +179,15 @@ int main(int argc, char** argv)
     return 0;
 }
 
+/* Creating packets in array and returns the packet size of the packet sent*/
 int create_packet(int current_index, int total_items, int packet_num, FILE* fp){
     int x = current_index;
     int num_of_items = total_items;
     int frame_size = 20;                //20 bytes
     char temp_buffer[frame_size];       //frame size
     char temp_file[32];                 
-    int sq_num = 0;                    
+    int sq_num = 0; 
+    int requested_sequencenum;                   
      
     
     while(1){
@@ -200,19 +196,21 @@ int create_packet(int current_index, int total_items, int packet_num, FILE* fp){
                 
                 printf("Where is the error inside else statement?");
                 printf("Where is the error?\n");
-                frame_size = num_of_items - x;
+                frame_size = num_of_items - x;       //last frame size
                 sq_num = packet_num % 2;
-                fseek(fp, x, SEEK_SET);
+
+                fseek(fp, x, SEEK_SET);              //seeking the pointer of the file to specific position so we can read bytes from that position onwards
                 fread(temp_buffer, 1, frame_size, fp);
+
                 memcpy(temp_file, &frame_size, 4);
                 // memcpy(temp_file+4, &seq_num, 4);
                 memcpy(temp_file+4, &sq_num, sizeof(int));
                 memcpy(temp_file+8, temp_buffer, frame_size);
 
-                if(sendto(sockfd, temp_file, 32 ,0, (struct sockaddr*)&serv_addr, slen)==-1){
+                if(lossy_sendto(loss_probability,random_seed,sockfd, temp_file, 32 ,0, (struct sockaddr*)&serv_addr, slen)==-1){. //sends the file with the loss probabilty and random seed to generate random number
                     err("sendto()");
                 }
-                recv_result = recvfrom(sockfd, ack_buffer, sizeof(ack_buffer), 0, (struct sockaddr*)&serv_addr, &slen);
+                recv_result = recvfrom(sockfd, &requested_sequencenum, sizeof(requested_sequencenum), 0, (struct sockaddr*)&serv_addr, &slen);   //recevice result from the server
                 if(recv_result > 0){
                     printf("Ack received\n");
                     break;
@@ -229,11 +227,11 @@ int create_packet(int current_index, int total_items, int packet_num, FILE* fp){
                 // memcpy(temp_file+4, &seq_num, 4);
                 printf("Did we reach here?\n");
                 memcpy(temp_file+4, temp_buffer, frame_size);
-                if(sendto(sockfd, temp_file, 32 ,0, (struct sockaddr*)&serv_addr, slen)==-1){
+                if(lossy_sendto(loss_probability,random_seed,sockfd, temp_file, 32 ,0, (struct sockaddr*)&serv_addr, slen)==-1){
                     err("sendto()");
                 }
                 printf("Did we make progress from here?\n");
-                recv_result = recvfrom(sockfd, ack_buffer, sizeof(ack_buffer), 0, (struct sockaddr*)&serv_addr, &slen);
+                recv_result = recvfrom(sockfd, &requested_sequencenum, sizeof(requested_sequencenum), 0, (struct sockaddr*)&serv_addr, &slen);
                 printf("About acknowledgement %d\n\n", recv_result);
                 if(recv_result > 0){
                     printf("Ack received\n");
