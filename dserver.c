@@ -20,19 +20,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sendlib.c"
+#include <time.h>
 #define BUFLEN 1000
 #define PORT 9930
 #define LENGTH 32
 #define HEADER_LENGTH 8
 
-void err(char *str)
+void err(char *s)
 {
-    perror(str);
+    perror(s);
     exit(1);
 }
 
-int main(void)
-{   char *szPort;
+int main(int argc, char** argv)
+{   
+    char *szPort;
     char *lossProbab;
     char *randomSeed;
     char *endptr;
@@ -121,69 +123,81 @@ int main(void)
   
     //     }    
     // }
+
+    // struct timeval tv;
+    // tv.tv_sec = 0;
+    // tv.tv_usec = 10000;
+    // if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))<0){
+    //     perror("Error\n");
+    // }
     
     /*Getting the format type*/
 
     printf("Preparing to send the files..................................................\n");
+    int total_packet_length = 46;
     int packet_length = 0;
     char filelength[4];
-    char expectedsqnum[4];
+    char sqnum[4];
     int bytes_sent;
 
     int packet_num = 0;
-    int sq_num = 0;
+    int expectedsq_num = 0;
     
 
     
-    while(1){
+    while(packet_length<total_packet_length){
         printf("...........\n");
         recv_result = recvfrom(sockfd, buffer, LENGTH, 0, (struct sockaddr*)&cli_addr, &slen);
         printf("Bytes received %d\n", recv_result);
         printf("Continue\n");
         if(recv_result>0){
             
-            printf("Acknowledgement sent %d\n",bytes_sent);
+            
             memcpy(filelength, buffer, 4);
             int file_length = *filelength;
             char file_content[file_length];
             printf("%d. is the file length\n", file_length);
-            memcpy(expectedsq_num, buffer+4, 4);
-            int expectedsq_num = *expectedsqnum;
-            if(file_length < 20){
-                break;
-            }
+            
+            
+            memcpy(sqnum, buffer+4, 4);
+            int sq_num = *sqnum;
+            
 
-            else{
+            
                 if(expectedsq_num == sq_num){
-                memcpy(file_content, buffer+8, file_length);
-                memcpy(buf+packet_length, file_content, file_length);
-                packet_length = packet_length + file_length;
-                packet_num = packet_num + 1;
-                expectedsq_num = packet_num % 2;
+                    printf("Did we reach here?\n");
+                    memcpy(file_content, buffer+8, file_length);
+                    memcpy(buf+packet_length, file_content, file_length);
+                    packet_length = packet_length + file_length;
+                    printf("1. The packet length is %d\n", packet_length);
+                    packet_num = packet_num + 1;
+                    expectedsq_num = packet_num % 2;
 
-                bytes_sent = lossy_sendto(loss_probability,random_seed,sockfd, &expectedsq_num, sizeof(ack_buffer), 0, (struct sockaddr*)&cli_addr, slen);
-                
+                    bytes_sent = lossy_sendto(loss_probability,random_seed,sockfd, &expectedsq_num, sizeof(ack_buffer), (struct sockaddr*)&cli_addr, slen);
+                    
                 }
             
             
-            else{
-                packet_length = packet_length - file_length;
-                memcpy(file_content, buffer+8, file_length);
-                memcpy(buf+packet_length, file_content, file_length);
-                packet_length = packet_length + file_length;
-                packet_num = packet_num + 1;
-                expectedsq_num = packet_num % 2;
-                bytes_sent = lossy_sendto(loss_probability,random_seed,sockfd, &expectedsq_num, sizeof(ack_buffer), 0, (struct sockaddr*)&cli_addr, slen);
+                else{
+                    packet_length = packet_length - file_length;
+                    packet_num = packet_num - 1;
+                    memcpy(file_content, buffer+8, file_length);
+                    memcpy(buf+packet_length, file_content, file_length);
+                    packet_length = packet_length + file_length;
+                    printf("2. The packet length is %d\n", packet_length);
+                    packet_num = packet_num + 1;
+                    expectedsq_num = packet_num % 2;
+                    bytes_sent = lossy_sendto(loss_probability,random_seed,sockfd, &expectedsq_num, sizeof(ack_buffer),(struct sockaddr*)&cli_addr, slen);
 
                 }
 
-            }
+            
         }    
     }
 
     for(int i = 0; i < packet_length; i++){
            printf("%d. The character member is %d\n",i+1, buf[i]);
-       }
+    }
 
     //creating a dummy target file and format type for now
     char format[2];
