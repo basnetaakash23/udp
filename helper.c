@@ -71,6 +71,11 @@ void process_file(char* buffer, int length_of_file, char* target_file, char* con
                 i = typefirst_input(i, buffer, fileptr,format_type);
                 //printf("The index returned here in type 2 is %d\n",i);
             }
+
+            else{
+                printf("Format Error\n");
+                exit(0);
+            }
         }
         printf("Succesfully converted and written into the file\n");
         //j = typezero_input(31,buffer, ptr1);

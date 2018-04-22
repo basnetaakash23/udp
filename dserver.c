@@ -91,13 +91,7 @@ int main(int argc, char** argv)
     else
         printf("Server : bind() successful\n");
     
-//    while(1)
-//    {
-//        if (recvfrom(sockfd, buf, BUFLEN, 0, (struct sockaddr*)&cli_addr, &slen)==-1)
-//            err("recvfrom()");
-//        printf("Received packet from %s:%d\nData: %s\n\n",
-//               inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port), buf);
-//    }
+
     printf("Preparing to receive the header file\n");
     while(1){
         printf("...........\n");
@@ -140,17 +134,12 @@ int main(int argc, char** argv)
         }    
     }
 
-    // struct timeval tv;
-    // tv.tv_sec = 0;
-    // tv.tv_usec = 10000;
-    // if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))<0){
-    //     perror("Error\n");
-    // }
+    
     
     /*Getting the format type*/
 
     printf("Preparing to send the files..................................................\n");
-    int total_packet_length = 46;
+    
     int packet_length = 0;
     char filelength[4];
     char sqnum[4];
@@ -160,8 +149,8 @@ int main(int argc, char** argv)
     int expectedsq_num = 0;
     
 
-    
-    while(packet_length<total_packet_length){
+    //as long as we do not read all the packets
+    while(packet_length<file_Length){
         printf("...........\n");
         recv_result = recvfrom(sockfd, buffer, LENGTH, 0, (struct sockaddr*)&cli_addr, &slen);
         printf("Bytes received %d\n", recv_result);
@@ -193,7 +182,7 @@ int main(int argc, char** argv)
                     
                 }
             
-            
+                //Handling duplicate packets
                 else{
                     packet_length = packet_length - file_length;
                     packet_num = packet_num - 1;
@@ -214,11 +203,9 @@ int main(int argc, char** argv)
     for(int i = 0; i < packet_length; i++){
            printf("%d. The character member is %d\n",i+1, buf[i]);
     }
-
-    //creating a dummy target file and format type for now
     
     
-
+    //call process file 
     process_file(buf, packet_length, target_file, format);
     printf("Process file called\n");
     

@@ -33,11 +33,7 @@
 
 char create_packet(int, int, int, FILE*, char*);
 
-volatile int stop = 0;
 
-void sigalrm_handler(int sig){
-    stop = 1;
-}
 
 void err(char *s)
 {
@@ -69,7 +65,7 @@ int main(int argc, char** argv)
     struct sockaddr_in serv_addr;
     int sockfd, i, slen=sizeof(serv_addr);
     // char buf[BUFLEN];
-    
+    //Handling command line arguments
     if(argc != 8)
     {
         printf("Incomplete Command Line arguments\n");
@@ -109,26 +105,8 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    /* Handling time */
-    struct sigaction sact;
-    sigemptyset (&sact.sa_mask);
-    sact.sa_flags = 0;
-    sact.sa_handler = sigalrm_handler;
-    sigaction(SIGALRM, &sact, NULL);
 
-    
-//    while(1)
-//    {
-//        printf("\nEnter data to send(Type exit and press enter to exit) : ");
-//        scanf("%[^\n]",buf);
-//        getchar();
-//        if(strcmp(buf,"exit") == 0)
-//            exit(0);
-//
-//        if (sendto(sockfd, buf, BUFLEN, 0, (struct sockaddr*)&serv_addr, slen)==-1)
-//            err("sendto()");
-//    }
-    struct timeval tv;
+    struct timeval tv;      //handles time out 
     tv.tv_sec = 0;
     tv.tv_usec = 300000;
     if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))<0){
@@ -166,20 +144,7 @@ int main(int argc, char** argv)
         }
 
     }
-    
-    
 
-    // memcpy(buffer, &file_length, 4);
-    // printf("It works up to here\n");
-    // memcpy(buffer+4, file_buffer, num_of_items);
-
-    // printf("It works up to here\n");
-    
-    // if(sendto(sockfd, buffer,MAX_LINE,0, (struct sockaddr*)&serv_addr, slen)==-1){
-    //     err("sendto()");
-    // }
-
-    
 
     int x = 0;
     int packet_num = 0;
@@ -195,9 +160,7 @@ int main(int argc, char** argv)
 
 
         while(1){
-            //printf("The print statement inside while statement?\n");
-           
-            //memcpy(packet, create_packet(x, num_of_items, packet_num, fp),32);
+            
             printf("The size of packet is %d\n", pack);
             //printf("Was string copy succesful?\n");
 
@@ -214,32 +177,7 @@ int main(int argc, char** argv)
                 break;
                     
             }
-            
-
-            
-            //time_t startTime = time(NULL);
-            // alarm(0.05);
-            // //printf("The time now is %f\n", startTime);
-            // //while(time(NULL) - startTime < 0.05){
-            // while(!stop){
-            //     printf("Sending files now with packet number %d\n", packet_num);
-            //     if(lossy_sendto(loss_probability,random_seed,sockfd, temp_file, 32 ,(struct sockaddr*)&serv_addr, slen)==-1){ //sends the file with the loss probabilty and random seed to generate random number
-            //         err("sendto()");
-            //     }
-            //     printf("File sent now waiting to receive acknowledgement\n");
-
-            //     recv_result = recvfrom(sockfd, &requested_sequencenum, sizeof(requested_sequencenum),0, (struct sockaddr*)&serv_addr, &slen);   //recevice result from the server
-            //     printf("File received %d bytes\n", recv_result);
-            //     if(recv_result>0){
-            //         packet_num++;
-            //         break;
-                    
-            //     }
-            // }
-            // printf("Did we reach out of the loop?\n");
-            // if(requested_sequencenum == packet_num%2){
-            //     break;
-            // }
+          
         }
 
         x = x + pack;
@@ -267,12 +205,11 @@ char create_packet(int current_index, int total_items, int packet_num, FILE* fp,
                      
      
     /* Returns the frame size only upon the succesful receipt of acknowledgement*/
-    
+        //packet size depends upon the ramining bytes left
         if(num_of_items -x < frame_size){
                 printf("%d last packet\n", num_of_items-x);
                 
-                //printf("Where is the error inside else statement?");
-                //printf("Where is the error?\n");
+              
                 frame_size = num_of_items - x;       //last frame size
                 sq_num = packet_num % 2;
 
@@ -292,13 +229,12 @@ char create_packet(int current_index, int total_items, int packet_num, FILE* fp,
 
         else{
                 sq_num = packet_num % 2;
-                //printf("The value of x is %d\n", x);
+                
                 fseek(fp, x, SEEK_SET);
                 fread(temp_buffer, 1, frame_size, fp); 
-                //printf("Where is the seg fault?\n");
+                
                 memcpy(temp_file, &frame_size, 4);
-                // memcpy(temp_file+4, &seq_num, 4);
-                //printf("Did we reach here?\n");
+                
                 memcpy(temp_file+4, &sq_num, sizeof(int));
                 memcpy(temp_file+8, temp_buffer, frame_size);
                 printf("Succesfully returned from create packet\n");
