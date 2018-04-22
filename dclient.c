@@ -27,7 +27,7 @@
 //#define BUFLEN 512
 #define MAX_LINE     (1000)
 #define PORT 9930
-#define HEADER_LENGTH 8
+#define HEADER_LENGTH 20
 #define PACKET_LENGTH 32
 #define FRAME_SIZE 20
 
@@ -84,8 +84,8 @@ int main(int argc, char** argv)
     lossProbab = argv[6];
     randomSeed = argv[7];
 
-    //float loss_probability = atof(lossProbab);
-    float loss_probability = 0.1;
+    float loss_probability = atof(lossProbab);
+    //float loss_probability = 0.1;
     printf("The loss probabiltiy is %f\n", loss_probability);
 
     int random_seed = atoi(randomSeed);
@@ -128,40 +128,45 @@ int main(int argc, char** argv)
 //        if (sendto(sockfd, buf, BUFLEN, 0, (struct sockaddr*)&serv_addr, slen)==-1)
 //            err("sendto()");
 //    }
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 300000;
+    if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))<0){
+        perror("Error\n");
+    }
+
+
     
-    FILE* fp = fopen("practice_project_test_file_1","rb");
+    FILE* fp = fopen(filepath,"rb");
     fseek(fp, 0, SEEK_END);
 
     int file_length = ftell(fp);
     rewind(fp);
     char file_buffer[file_length];
     int num_of_items = fread(file_buffer, 1, file_length, fp);
+    printf("The number of read items is %d\n", num_of_items);
 
-    printf("%d. is the file length\n", num_of_items);
+    printf("%d. is the file length\n", file_length);
 
-/*
-    // uint8_t filename_length = strlen(toName);
 
-    // memcpy(header_buffer, toFormat, 1);                         //copying format information
-    // memcpy(header_buffer+1, &filename_length, 1);               //copying file name filename_length
-    // memcpy(header_buffer+2, toName, filename_length);           //copying toname value
-    // memcpy(header_buffer+2+filename_length, &file_length, 4);   //copying file length
+    int filename_length = strlen(toName);
 
-    //  Trying to send command line arguments as header information to server
-    // while(1){
-    //     lossy_sendto(loss_probability,random_seed,sockfd, header_buffer, HEADER_LENGTH ,0, (struct sockaddr*)&serv_addr, slen)
-    //     char ack[2];
-    //     int received_result = recvfrom(sockfd, ack, sizeof(ack_buffer), 0, (struct sockaddr*)&serv_addr, &slen);
-    //     if(received_result>0){
-    //         break;
-    //     }
+    memcpy(header_buffer, toFormat, sizeof(char));                         //copying format information
+    memcpy(header_buffer+1, &filename_length, sizeof(int));               //copying file name filename_length
+    memcpy(header_buffer+1+sizeof(int), toName, filename_length);           //copying toname value
+    memcpy(header_buffer+1+sizeof(int)+filename_length, &file_length, sizeof(int));   //copying file length
 
-    //     else{
-    //         continue;
-    //     }
+    /*Trying to send command line arguments as header information to server*/
+    while(1){
+        lossy_sendto(loss_probability,random_seed,sockfd, header_buffer, 20 , (struct sockaddr*)&serv_addr, slen);
+        char ack[2];
+        int received_result = recvfrom(sockfd, ack, sizeof(ack_buffer), 0, (struct sockaddr*)&serv_addr, &slen);
+        if(received_result>0){
+            break;
+        }
 
-    // }
-    */
+    }
+    
     
 
     // memcpy(buffer, &file_length, 4);
@@ -174,12 +179,7 @@ int main(int argc, char** argv)
     //     err("sendto()");
     // }
 
-    struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = 200000;
-    if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))<0){
-        perror("Error\n");
-    }
+    
 
     int x = 0;
     int packet_num = 0;

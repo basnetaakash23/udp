@@ -20,11 +20,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sendlib.c"
+#include "helper.c"
 #include <time.h>
 #define BUFLEN 1000
 #define PORT 9930
 #define LENGTH 32
-#define HEADER_LENGTH 8
+#define HEADER_LENGTH 20
 
 void err(char *s)
 {
@@ -49,6 +50,12 @@ int main(int argc, char** argv)
     char buf[BUFLEN];
     char buffer[LENGTH];
     char ack_buffer[2];
+    char* target_file;
+    int file_Length;
+
+    char fileLength[4]; 
+    char format[2]; 
+    char fileNameLength[4];
 
     if(argc != 4)
     {
@@ -91,38 +98,47 @@ int main(int argc, char** argv)
 //        printf("Received packet from %s:%d\nData: %s\n\n",
 //               inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port), buf);
 //    }
-    // printf("Preparing to receive the header file\n");
-    // while(1){
-    //     printf("...........\n");
-    //     recv_result = recvfrom(sockfd, header_buffer, HEADER_LENGTH, 0, (struct sockaddr*)&cli_addr, &slen);
-    //     printf("Bytes received %d\n", recv_result);
-    //     if(recv_result>0){
-    //         char format[1];
-    //         format[0] = header_buffer[0];
-    //         uint8_t format_ = *format;     //format_ stores the 8 bit integer value of format
+    printf("Preparing to receive the header file\n");
+    while(1){
+        printf("...........\n");
+        recv_result = recvfrom(sockfd, header_buffer, HEADER_LENGTH, 0, (struct sockaddr*)&cli_addr, &slen);
+        printf("Bytes received %d\n", recv_result);
+        if(recv_result>0){
+            
+            format[0] = header_buffer[0];
+            format[1] = '\0';
+            printf("%s is the format\n", format);
+
+            char fileNameLength[4];
+            memcpy(fileNameLength, header_buffer+1, 4);
+            int file_name_length = *fileNameLength; //file name length has been copied
+            target_file = (char *) malloc(file_name_length+1);
 
 
-    //         uint8_t file_name_length = header_buffer[1]; //file name length has been copied
-    //         char target_file[file_name_length+1];
-
-    //         memcpy(target_file, header_buffer+2, file_name_length); //copies into the memory
-    //         target_file[file_name_length] = '\0';    //target file will be stored as string
+            memcpy(target_file, header_buffer+5, file_name_length); //copies into the memory
+            target_file[file_name_length] = '\0';    //target file will be stored as string
 
 
-    //         char fileLength[4];                      //stores the file length for now 
-    //         memcpy(filelength, header_buffer+2+file_name_length, 4);
-    //         int file_Length = *fileLength;
+                                //stores the file length for now 
+            printf("%s is the target file\n", target_file);
+            memcpy(fileLength, header_buffer+5+file_name_length, 4);
+            file_Length = *fileLength;
 
-    //         char ack[2] = ['1','\0'];
+            printf("%d ..is the file length\n", file_Length);
 
-    //         int sent_ack = sendto(sockfd, ack, sizeof(ack), 0, (struct sockaddr*)&cli_addr, slen);
+            char ack[2] ;
+            ack[0] = '1';
+            ack[1] = '\0';
+
+
+            int sent_ack = lossy_sendto(loss_probability,random_seed,sockfd, ack, sizeof(ack), (struct sockaddr*)&cli_addr, slen);
 
 
 
-    //         break;
+            break;
   
-    //     }    
-    // }
+        }    
+    }
 
     // struct timeval tv;
     // tv.tv_sec = 0;
@@ -200,13 +216,10 @@ int main(int argc, char** argv)
     }
 
     //creating a dummy target file and format type for now
-    char format[2];
-    format[0] = 1;
-    format[1] = '\0';
+    
+    
 
-    char* target_file = "output";
-
-    //process_file(file_content, file_length, target_file, format);
+    process_file(buf, packet_length, target_file, format);
     printf("Process file called\n");
     
     close(sockfd);

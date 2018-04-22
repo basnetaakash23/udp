@@ -154,14 +154,12 @@ void convert_to_typeOne(FILE* pointer,  uint8_t amount, uint16_t numbers[]){
     
 int typefirst_input(int pos, char* binary_buffer, FILE *pointer, char* convert_option){
         printf("The index before entering type 1 is %d\n", pos);
-    char * format_type = convert_option;
+        char * format_type = convert_option;
         FILE* ptr = pointer;
         int i = pos;
         uint8_t amount = (binary_buffer[i+1]-48)*100 + (binary_buffer[i+2]-48)*10 + binary_buffer[i+3]-48;
         char amount_[4];                         //printing three bytes of amount
-//        printf("%d.....\n",binary_buffer[pos+1]);
-//        printf("%d.....\n",binary_buffer[pos+2]);
-//        printf("%d.....\n",binary_buffer[pos+3]);
+
         amount_[0] = binary_buffer[pos+1];
         amount_[1] = binary_buffer[pos+2];
         amount_[2] = binary_buffer[pos+3];
@@ -233,23 +231,23 @@ int typefirst_input(int pos, char* binary_buffer, FILE *pointer, char* convert_o
                 }
             }
         }
-    }
+}
     
 void convert_to_typeZero(FILE* pointer, uint8_t amount, short numbers[]){
     
             //printf("Converting \n");
-            uint8_t type = 0;
-            fwrite(&type, sizeof(uint8_t), 1, pointer);
-            fwrite(&amount, sizeof(uint8_t),1, pointer);
-            for(int i =0; i<amount; i++){
+    uint8_t type = 0;
+    fwrite(&type, sizeof(uint8_t), 1, pointer);
+    fwrite(&amount, sizeof(uint8_t),1, pointer);
+    for(int i =0; i<amount; i++){
                 //printf("%d............type0\n",numbers[i]);
-                fwrite(&numbers[i], sizeof(short),1, pointer);
-            }
+    fwrite(&numbers[i], sizeof(short),1, pointer);
+    }
     
     
         //printf("Converted\n");
         
-    }
+ }
 
 
 
